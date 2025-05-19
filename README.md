@@ -4,79 +4,30 @@
 - Source: [Kaggle Layoffs Dataset 2022](https://www.kaggle.com/datasets/swaptr/layoffs-2022)
 - Table: `world_layoffs.layoffs`
 
-## Objective
-The project focuses on cleaning the layoffs dataset using SQL to ensure data accuracy and consistency by:
-1. Removing duplicates.
-2. Standardizing and correcting data.
-3. Handling null values.
-4. Dropping unnecessary rows and columns.
-
-## Steps Taken
-
-### 1. Creating a Staging Table
-- A staging table `layoffs_staging` was created as a working copy.
-```sql
-CREATE TABLE world_layoffs.layoffs_staging
-LIKE world_layoffs.layoffs;
-INSERT INTO world_layoffs.layoffs_staging
-SELECT * FROM world_layoffs.layoffs;
-```
-
-### 2. Removing Duplicates
-- Identified duplicates using `ROW_NUMBER()` partitioned by key columns.
-- Verified duplicate entries before deletion.
-- Used a CTE (`DELETE_CTE`) to delete duplicate rows.
-```sql
-WITH DELETE_CTE AS (
-    SELECT *, ROW_NUMBER() OVER (
-        PARTITION BY company, location, industry, total_laid_off, percentage_laid_off, date, stage, country, funds_raised_millions
-    ) AS row_num
-    FROM world_layoffs.layoffs_staging
-)
-DELETE FROM world_layoffs.layoffs_staging
-WHERE row_num > 1;
-```
-
-### 3. Standardizing Data
-- Handled missing and inconsistent values.
-- Populated `industry` column based on existing company data.
-- Standardized inconsistent industry names (e.g., "CryptoCurrency" → "Crypto").
-- Fixed country name inconsistencies (e.g., "United States." → "United States").
-```sql
-UPDATE world_layoffs.layoffs_staging
-SET industry = 'Crypto'
-WHERE industry IN ('Crypto Currency', 'CryptoCurrency');
-
-UPDATE world_layoffs.layoffs_staging
-SET country = TRIM(TRAILING '.' FROM country);
-```
-- Converted `date` column to a proper `DATE` format.
-```sql
-UPDATE layoffs_staging
-SET `date` = STR_TO_DATE(`date`, '%m/%d/%Y');
-ALTER TABLE layoffs_staging MODIFY COLUMN `date` DATE;
-```
-
-### 4. Handling Null Values
-- Checked for null values in key columns.
-- Retained null values in numeric columns to preserve data integrity.
-```sql
-SELECT * FROM world_layoffs.layoffs_staging WHERE total_laid_off IS NULL;
-```
-
-### 5. Removing Unnecessary Data
-- Deleted rows where both `total_laid_off` and `percentage_laid_off` were null.
-```sql
-DELETE FROM world_layoffs.layoffs_staging
-WHERE total_laid_off IS NULL AND percentage_laid_off IS NULL;
-```
-- Dropped the `row_num` column after deduplication.
-```sql
-ALTER TABLE world_layoffs.layoffs_staging DROP COLUMN row_num;
-```
-
-## Final Output
-- The cleaned dataset is stored in `world_layoffs.layoffs_staging2`.
-- Ready for exploratory data analysis (EDA) and further insights.
+Overview
+--------
+This project focuses on cleaning a dataset of tech layoffs from 2022, sourced from Kaggle (https://www.kaggle.com/datasets/swaptr/layoffs-2022). The SQL script performs several data cleaning steps to prepare the data for further analysis.
 
 
+Steps Performed
+--------------
+1. **Create Staging Table:** A copy of the raw data is created in a new table (`world_layoffs.layoffs_staging`) to preserve the original data.
+
+2. **Remove Duplicate Rows:** Duplicate entries are identified and removed from the staging table based on all key identifying columns (company, location, industry, total_laid_off, percentage_laid_off, date, stage, country, funds_raised_millions). Only the first occurrence of each unique record is retained.
+
+3. **Standardize Data and Correct Errors:**
+   - **Industry:** Empty strings in the `industry` column are converted to NULL. Missing `industry` values are attempted to be populated by referencing other rows with the same company name. Inconsistent entries for "Crypto" (e.g., "Crypto Currency", "CryptoCurrency") are standardized to "Crypto".
+   - **Country:** Trailing periods are removed from values in the `country` column to ensure consistency (e.g., "United States." becomes "United States").
+   - **Date:** The `date` column, initially in text format ('%m/%d/%Y'), is converted to the DATE data type for proper date handling.
+
+4. **Investigate and Handle Null Values:** Rows where both `total_laid_off` and `percentage_laid_off` are NULL are removed as they provide minimal analytical value. Other NULL values in columns like `total_laid_off`, `percentage_laid_off`, and `funds_raised_millions` are retained as they may be meaningful for analysis.
+
+5. **Remove Unnecessary Columns:** A temporary `row_num` column, if created during the duplicate removal process, is dropped from the final cleaned staging table.
+
+Output
+------
+The cleaned dataset is stored in the `world_layoffs.layoffs_staging` table, ready for further exploratory data analysis (EDA) or other analytical tasks.
+
+Note
+----
+This README provides a summary of the data cleaning process implemented in the SQL script. For detailed steps and the specific SQL queries, please refer to the SQL script itself.
