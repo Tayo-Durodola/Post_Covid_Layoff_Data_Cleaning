@@ -1,5 +1,6 @@
 -- SQL Project - Data Cleaning
 
+
 -- Source: https://www.kaggle.com/datasets/swaptr/layoffs-2022
 
 -- Create a staging table to hold the raw data for cleaning.
